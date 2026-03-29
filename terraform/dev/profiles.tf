@@ -4,10 +4,10 @@ locals {
   project_name = "profiles"
   environment  = "dev"
 
-  region     = var.aws_region
-  account_id = data.aws_caller_identity.current.account_id
-  lambda_artifact_key    = "profiles/v1.0.0/profiles_ingest.zip"
-  
+  region              = var.aws_region
+  account_id          = data.aws_caller_identity.current.account_id
+  lambda_artifact_key = "profiles/v1.0.0/profiles_ingest.zip"
+
   common_tags = {
     Project     = local.project_name
     Environment = local.environment
