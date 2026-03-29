@@ -1,13 +1,21 @@
-variable "name" {
-  type = string
+variable "project_name" {
+  type        = string
+  description = "Project name used in bucket and Glue database naming"
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment name such as dev, qa, prod"
 }
 
 variable "account_id" {
-  type = string
+  type        = string
+  description = "AWS account ID"
 }
 
 variable "region" {
-  type = string
+  type        = string
+  description = "AWS region"
 }
 
 variable "versioning_enabled" {
@@ -24,28 +32,28 @@ variable "sse_algorithm" {
 
 variable "bucket_key_enabled" {
   type        = bool
-  description = "Enable bucket key for SSE configuration"
+  description = "Enable S3 bucket key"
   default     = true
 }
 
 variable "block_public_acls" {
-  type        = bool
-  default     = true
+  type    = bool
+  default = true
 }
 
 variable "block_public_policy" {
-  type        = bool
-  default     = true
+  type    = bool
+  default = true
 }
 
 variable "ignore_public_acls" {
-  type        = bool
-  default     = true
+  type    = bool
+  default = true
 }
 
 variable "restrict_public_buckets" {
-  type        = bool
-  default     = true
+  type    = bool
+  default = true
 }
 
 variable "tags" {
