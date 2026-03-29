@@ -1,0 +1,69 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan-destroy:
+    name: Terraform Plan Destroy
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init Dev Environment
+        run: terraform init -reconfigure
+        working-directory: ./terraform/dev
+
+      - name: Terraform Plan Destroy Dev Environment
+        run: terraform plan -destroy -input=false
+        working-directory: ./terraform/dev
+
+  destroy:
+    name: Terraform Destroy
+    needs: plan-destroy
+    runs-on: ubuntu-latest
+    environment: dev
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init Dev Environment
+        run: terraform init -reconfigure
+        working-directory: ./terraform/dev
+
+      - name: Terraform Destroy Dev Environment
+        run: terraform destroy -auto-approve -input=false
+        working-directory: ./terraform/dev
