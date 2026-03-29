@@ -64,10 +64,6 @@ resource "aws_s3_object" "gold_prefix" {
   content = ""
 }
 
-resource "aws_glue_catalog_database" "raw" {
-  name = "${var.project_name}_raw"
-}
-
 resource "aws_glue_catalog_database" "bronze" {
   name = "${var.project_name}_bronze"
 }
