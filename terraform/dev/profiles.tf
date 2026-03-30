@@ -101,6 +101,76 @@ resource "aws_iam_role_policy" "lambda_policy" {
     ]
   })
 }
+
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+}
+
+data "aws_iam_policy_document" "github_actions_assume_role" {
+  statement {
+    sid     = "GitHubActionsOIDC"
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [data.aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        "repo:shxr3f/profilesLambdaFunction:ref:refs/heads/master"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions" {
+  name               = "${local.project_name}-${local.environment}-github-actions-role"
+  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
+
+  tags = merge(local.common_tags, {
+    Purpose = "github-actions-cicd"
+  })
+}
+
+resource "aws_iam_role_policy" "github_actions_policy" {
+  name = "${local.project_name}-${local.environment}-github-actions-policy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowArtifactBucketList"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.lambda_artifacts.arn
+      },
+      {
+        Sid    = "AllowArtifactObjectWrite"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.lambda_artifacts.arn}/profiles/*"
+      }
+    ]
+  })
+}
+
+
 ## To deply after arttifact has been pushed to bucket
 # resource "aws_lambda_function" "profiles_ingest" {
 #   function_name = "${local.project_name}-${local.environment}-ingest"
