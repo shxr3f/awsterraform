@@ -6,7 +6,7 @@ locals {
 
   region              = var.aws_region
   account_id          = data.aws_caller_identity.current.account_id
-  lambda_artifact_key = "profiles/v1.0.0/profiles_ingest.zip"
+  lambda_artifact_key = "profiles/dummy/profiles_ingest.zip"
 
   common_tags = {
     Project     = local.project_name
@@ -25,6 +25,14 @@ module "profiles_data_lake" {
 
   tags = merge(local.common_tags, {
     Purpose = "data-lake"
+  })
+}
+
+resource "aws_secretsmanager_secret" "pdl_api_key" {
+  name = "profiles/dev/pdl_api_key"
+
+  tags = merge(local.common_tags, {
+    Type = "secret"
   })
 }
 
@@ -97,6 +105,14 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "${module.profiles_data_lake.bucket_arn}/silver/*",
           "${module.profiles_data_lake.bucket_arn}/gold/*"
         ]
+      },
+      {
+        Sid    = "AllowReadPDLSecret"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = aws_secretsmanager_secret.pdl_api_key.arn
       }
     ]
   })
@@ -170,50 +186,56 @@ resource "aws_iam_role_policy" "github_actions_policy" {
   })
 }
 
+# To deply after arttifact has been pushed to bucket
+resource "aws_lambda_function" "profiles_ingest" {
+  function_name = "${local.project_name}-${local.environment}-ingest"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = "python3.12"
+  handler       = "handler.lambda_handler"
 
-## To deply after arttifact has been pushed to bucket
-# resource "aws_lambda_function" "profiles_ingest" {
-#   function_name = "${local.project_name}-${local.environment}-ingest"
-#   role          = aws_iam_role.lambda_exec.arn
-#   runtime       = "python3.12"
-#   handler       = "handler.lambda_handler"
+  s3_bucket = aws_s3_bucket.lambda_artifacts.bucket
+  s3_key    = local.lambda_artifact_key
 
-#   s3_bucket = aws_s3_bucket.lambda_artifacts.bucket
-#   s3_key    = local.lambda_artifact_key
+  timeout     = 120
+  memory_size = 256
 
-#   timeout     = 120
-#   memory_size = 256
+  environment {
+    variables = {
+      DATA_LAKE_BUCKET = module.profiles_data_lake.bucket_name
+      PROJECT_NAME     = local.project_name
+      ENVIRONMENT      = local.environment
+      BRONZE_DB        = module.profiles_data_lake.bronze_database_name
+      SILVER_DB        = module.profiles_data_lake.silver_database_name
+      GOLD_DB          = module.profiles_data_lake.gold_database_name
+    }
+  }
 
-#   environment {
-#     variables = {
-#       DATA_LAKE_BUCKET = module.profiles_data_lake.bucket_name
-#       PROJECT_NAME     = local.project_name
-#       ENVIRONMENT      = local.environment
-#       BRONZE_DB        = module.profiles_data_lake.bronze_database_name
-#       SILVER_DB        = module.profiles_data_lake.silver_database_name
-#       GOLD_DB          = module.profiles_data_lake.gold_database_name
-#     }
-#   }
+  lifecycle {
+    ignore_changes = [
+      s3_key,
+      s3_object_version
+    ]
+  }
 
-#   tags = local.common_tags
-# }
+  tags = local.common_tags
+}
 
-# resource "aws_lambda_permission" "allow_s3_invoke" {
-#   statement_id  = "AllowS3InvokeLambda"
-#   action        = "lambda:InvokeFunction"
-#   function_name = aws_lambda_function.profiles_ingest.function_name
-#   principal     = "s3.amazonaws.com"
-#   source_arn    = module.profiles_data_lake.bucket_arn
-# }
+resource "aws_lambda_permission" "allow_s3_invoke" {
+  statement_id  = "AllowS3InvokeLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.profiles_ingest.function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = module.profiles_data_lake.bucket_arn
+}
 
-# resource "aws_s3_bucket_notification" "profiles_input_trigger" {
-#   bucket = module.profiles_data_lake.bucket_id
+resource "aws_s3_bucket_notification" "profiles_input_trigger" {
+  bucket = module.profiles_data_lake.bucket_id
 
-#   lambda_function {
-#     lambda_function_arn = aws_lambda_function.profiles_ingest.arn
-#     events              = ["s3:ObjectCreated:*"]
-#     filter_prefix       = "raw/input/"
-#   }
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.profiles_ingest.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "raw/input/"
+  }
 
-#   depends_on = [aws_lambda_permission.allow_s3_invoke]
-# }
+  depends_on = [aws_lambda_permission.allow_s3_invoke]
+}
