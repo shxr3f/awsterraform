@@ -181,6 +181,14 @@ resource "aws_iam_role_policy" "github_actions_policy" {
           "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.lambda_artifacts.arn}/profiles/*"
+      },
+      {
+        Sid    = "AllowLambdaCodeUpdate"
+        Effect = "Allow"
+        Action = [
+          "lambda:UpdateFunctionCode"
+        ]
+        Resource = aws_lambda_function.profiles_ingest.arn
       }
     ]
   })
@@ -239,3 +247,4 @@ resource "aws_s3_bucket_notification" "profiles_input_trigger" {
 
   depends_on = [aws_lambda_permission.allow_s3_invoke]
 }
+
