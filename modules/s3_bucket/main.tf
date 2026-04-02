@@ -141,6 +141,17 @@ resource "aws_iam_role_policy" "glue_crawler_s3_access" {
   })
 }
 
+resource "aws_glue_classifier" "csv_standard" {
+  name = "csv-standard"
+
+  csv_classifier {
+    delimiter       = ","
+    quote_symbol    = "\""
+    contains_header = "PRESENT"
+  }
+
+}
+
 resource "aws_glue_crawler" "bronze" {
   name          = "${var.project_name}-${var.environment}-bronze-crawler"
   role          = aws_iam_role.glue_crawler.arn
@@ -165,6 +176,8 @@ resource "aws_glue_crawler" "bronze" {
       TableLevelConfiguration = 2
     }
   })
+
+  classifiers = [aws_glue_classifier.csv_standard.name]
 
   depends_on = [
     aws_iam_role_policy_attachment.glue_crawler_service_role,
