@@ -216,7 +216,7 @@ resource "aws_lambda_function" "profiles_ingest" {
       INPUT_PREFIX     = "raw/input/"
       RAW_PREFIX       = "raw/api_response/"
       BRONZE_PREFIX    = "bronze/"
-      PDL_SECRET_ARN   = aws_secretsmanager_secret.pdl_api.arn
+      PDL_SECRET_ARN   = aws_secretsmanager_secret.pdl_api_key.arn
     }
   }
 
