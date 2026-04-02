@@ -212,7 +212,6 @@ resource "aws_lambda_function" "profiles_ingest" {
       DATA_LAKE_BUCKET = module.profiles_data_lake.bucket_name
       PROJECT_NAME     = local.project_name
       ENVIRONMENT      = local.environment
-      AWS_REGION       = local.region
       INPUT_PREFIX     = "raw/input/"
       RAW_PREFIX       = "raw/api_response/"
       BRONZE_PREFIX    = "bronze/"
