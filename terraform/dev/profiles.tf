@@ -212,9 +212,11 @@ resource "aws_lambda_function" "profiles_ingest" {
       DATA_LAKE_BUCKET = module.profiles_data_lake.bucket_name
       PROJECT_NAME     = local.project_name
       ENVIRONMENT      = local.environment
-      BRONZE_DB        = module.profiles_data_lake.bronze_database_name
-      SILVER_DB        = module.profiles_data_lake.silver_database_name
-      GOLD_DB          = module.profiles_data_lake.gold_database_name
+      AWS_REGION       = local.region
+      INPUT_PREFIX     = "raw/input/"
+      RAW_PREFIX       = "raw/api_response/"
+      BRONZE_PREFIX    = "bronze/"
+      PDL_SECRET_ARN   = aws_secretsmanager_secret.pdl_api_key.arn
     }
   }
 
