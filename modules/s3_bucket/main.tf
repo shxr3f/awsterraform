@@ -75,3 +75,84 @@ resource "aws_glue_catalog_database" "silver" {
 resource "aws_glue_catalog_database" "gold" {
   name = "${var.project_name}_gold"
 }
+
+resource "aws_iam_role" "glue_crawler" {
+  name = "${var.project_name}-${var.environment}-glue-crawler-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "glue.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "glue_crawler_service_role" {
+  role       = aws_iam_role.glue_crawler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
+}
+
+resource "aws_iam_role_policy" "glue_crawler_s3_access" {
+  name = "${var.project_name}-${var.environment}-glue-crawler-s3-access"
+  role = aws_iam_role.glue_crawler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ListBucket"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.this.arn
+      },
+      {
+        Sid    = "ReadBronzeObjects"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.this.arn}/bronze/*"
+      }
+    ]
+  })
+}
+
+resource "aws_glue_crawler" "bronze" {
+  name          = "${var.project_name}-${var.environment}-bronze-crawler"
+  role          = aws_iam_role.glue_crawler.arn
+  database_name = aws_glue_catalog_database.bronze.name
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.this.bucket}/bronze/"
+  }
+
+  schema_change_policy {
+    delete_behavior = "LOG"
+    update_behavior = "UPDATE_IN_DATABASE"
+  }
+
+  recrawl_policy {
+    recrawl_behavior = "CRAWL_EVERYTHING"
+  }
+
+  configuration = jsonencode({
+    Version = 1.0
+    Grouping = {
+      TableGroupingPolicy = "CombineCompatibleSchemas"
+    }
+  })
+
+  depends_on = [
+    aws_iam_role_policy_attachment.glue_crawler_service_role,
+    aws_iam_role_policy.glue_crawler_s3_access,
+    aws_s3_object.bronze_prefix
+  ]
+}
