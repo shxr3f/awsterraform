@@ -237,21 +237,5 @@ resource "aws_lambda_permission" "allow_s3_invoke" {
   source_arn    = module.profiles_data_lake.bucket_arn
 }
 
-resource "aws_s3_bucket_notification" "profiles_trigger" {
-  bucket = module.profiles_data_lake.bucket_id
 
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.profiles_ingest.arn
-    events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "raw/input/"
-  }
-
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.profiles_ingest.arn
-    events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "raw/api_response/"
-  }
-
-  depends_on = [aws_lambda_permission.allow_s3_invoke]
-}
 
