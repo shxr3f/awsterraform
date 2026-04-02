@@ -162,7 +162,7 @@ resource "aws_glue_crawler" "bronze" {
   configuration = jsonencode({
     Version = 1.0
     Grouping = {
-      TableGroupingPolicy = "CombineCompatibleSchemas"
+      TableLevelConfiguration = 2
     }
   })
 
