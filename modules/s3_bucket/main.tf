@@ -64,6 +64,12 @@ resource "aws_s3_object" "gold_prefix" {
   content = ""
 }
 
+resource "aws_s3_object" "athena_results_prefix" {
+  bucket  = aws_s3_bucket.this.id
+  key     = "athena-results/"
+  content = ""
+}
+
 resource "aws_glue_catalog_database" "bronze" {
   name = "${var.project_name}_bronze"
 }
@@ -74,6 +80,16 @@ resource "aws_glue_catalog_database" "silver" {
 
 resource "aws_glue_catalog_database" "gold" {
   name = "${var.project_name}_gold"
+}
+
+resource "aws_athena_workgroup" "this" {
+  name = "${var.project_name}-${var.environment}"
+
+  configuration {
+    result_configuration {
+      output_location = "s3://${aws_s3_bucket.this.bucket}/athena-results/"
+    }
+  }
 }
 
 resource "aws_iam_role" "glue_crawler" {
